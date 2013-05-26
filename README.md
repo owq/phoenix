@@ -3,7 +3,7 @@ phoenix
 
 Base: Phoenix Bitcoin Miner 2.0
 
-1. Stratum protocol support
+1. Stratum protocol support (use stratum:// instead of http://)
 2. Simple GUI with minimize to tray
 3. New options in example.cfg
 
