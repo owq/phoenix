@@ -49,7 +49,7 @@ class PhoenixCore(object):
     VER = (2, 0, 0)
     VERSION = 'v%s.%s.%s' % VER
 
-    def __init__(self, cfgFilename='phoenix.cfg'):
+    def __init__(self, cfgFilename='phoenix.cfg', gui = None):
         self.kernelTypes = {}
         self.connection = None #Is a ClientBase
         self.connectionURL = None
@@ -63,7 +63,6 @@ class PhoenixCore(object):
             self.basedir = os.path.dirname(sys.executable)
 
         self.config = PhoenixConfig(cfgFilename)
-        gui = self.config.get('general', 'gui', bool, False)
         self.logger = PhoenixGUILogger(self) if gui else PhoenixLogger(self) 
         self.queue = WorkQueue(self)
         self.rpc = PhoenixRPC(self)

@@ -24,7 +24,7 @@ from phoenix2.core.PhoenixCore import PhoenixCore
 
 import sys, os
 
-def main():
+def main(gui = None):
     if len(sys.argv) > 1:
         cfg = sys.argv[1]
     elif sys.platform == 'win32':
@@ -47,8 +47,10 @@ def main():
         print('Error: %s does not exist.' % cfg)
         sys.exit()
 
-    pc = PhoenixCore(cfg)
+    pc = PhoenixCore(cfg, gui)
     pc.start()
 
     reactor.run()
 
+def maingui():
+    main(True)
