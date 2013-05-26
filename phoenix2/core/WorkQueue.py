@@ -28,6 +28,8 @@ from twisted.internet import reactor
 from twisted.internet.defer import DeferredLock
 from ..util.Midstate import calculateMidstate
 
+from ..backend.StratumProtocol import StratumClient
+
 """A WorkUnit is a single unit containing up to 2^32 nonces. A single getWork
 request returns a WorkUnit.
 """
@@ -48,6 +50,10 @@ class WorkUnit(object):
         self.time = aw.time
         self.downloaded = time()
         self.callbacks = set()
+        
+        #Stratum
+        self.job_id = aw.job_id
+        self.extranonce2 = aw.extranonce2
 
     def set_timestamp(self, timestamp):
         self.data = (self.data[:68] + struct.pack('>I', timestamp) +
@@ -164,7 +170,7 @@ class WorkQueue(object):
         self.core.reportIdle(False)
 
     def checkWork(self):
-        # Called 5 seconds before any work expires in order to fetch more
+        # Called 5 seconds before any work expires in order to fetch more        
         if self.checkQueue():
             if self.core.connection:
                 self.core.requestWork()
@@ -208,6 +214,15 @@ class WorkQueue(object):
 
         # Return True/False indicating if more work should be fetched
         return size + queueLength < self.queueSize
+    
+    #TODO how to stop the stale work on the GPU?!
+    def workClear(self):
+        """Clear queue immediately (may not be a good idea)"""
+        for wu in self.queue:
+            if self.currentUnit == wu:
+                self.currentUnit = None
+            wu.stale()
+        self.queue.clear()
 
     def workExpire(self, wu):
         # Don't expire WorkUnits if idle and queue empty

@@ -25,10 +25,11 @@ from twisted.internet.defer import Deferred
 
 from MMPProtocol import MMPClient
 from RPCProtocol import RPCClient
+from StratumProtocol import StratumClient
 
 def openURL(url, handler):
     """Parses a URL and opens a connection using the appropriate client."""
-
+    
     parsed = urlparse.urlparse(url)
     if parsed.scheme.lower() == 'mmp':
         client = MMPClient(handler, parsed.hostname or 'localhost',
@@ -41,6 +42,8 @@ def openURL(url, handler):
         return client
     elif parsed.scheme.lower() in ['http', 'https']:
         return RPCClient(handler, parsed)
+    elif parsed.scheme.lower() in ['stratum', 'stratum+tcp']:
+        return StratumClient(handler, parsed)
     else:
         raise ValueError('Unknown protocol: ' + parsed.scheme)
 

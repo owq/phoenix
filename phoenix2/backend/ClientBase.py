@@ -31,6 +31,10 @@ class AssignedWork(object):
     def setMaxTimeIncrement(self, n):
         self.time = n
         self.maxtime = struct.unpack('>I', self.data[68:72])[0] + n
+        
+    #For Stratum
+    job_id = None
+    extranonce2 = None
 
 class ClientBase(object):
     callbacksActive = True
@@ -46,6 +50,7 @@ class ClientBase(object):
         if not self.callbacksActive:
             return
 
+        #self.handler refers to the core object.
         func = getattr(self.handler, 'on' + callback.capitalize(), None)
         if callable(func):
             func(*args)

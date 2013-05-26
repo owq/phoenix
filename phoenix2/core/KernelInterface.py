@@ -29,6 +29,7 @@ from twisted.internet import defer, reactor
 from weakref import WeakKeyDictionary
 
 from phoenix2.core.PhoenixLogger import *
+from ..backend.StratumProtocol import StratumClient
 
 # I'm using this as a sentinel value to indicate that an option has no default;
 # it must be specified.
@@ -206,17 +207,24 @@ class KernelInterface(object):
             return False
 
         if self.checkTarget(hash, wu.target):
-            formattedResult = pack('>68sI4s', wu.data[:68], timestamp,
-                                    wu.data[72:76]) + pack('<I', nonce)
-            d = self.core.connection.sendResult(formattedResult)
-            def callback(accepted):
-                self.core.logger.dispatch(ResultLog(self, hash, accepted))
-                if accepted:
-                    self.accepted += 1
-                else:
-                    self.rejected += 1
-            d.addCallback(callback)
-            return True
+            def callback(accepted, error_code=None, error_msg=None):
+                    self.core.logger.dispatch(ResultLog(self, hash, accepted, error_code, error_msg))
+                    if accepted:
+                        self.accepted += 1
+                    else:
+                        self.rejected += 1
+            if isinstance(self.core.connection, StratumClient):
+                #TODO what if this returns false?
+#                 formattedResult = pack('>68sI4s', wu.data[:68], timestamp,
+#                                         wu.data[72:76]) + pack('<I', nonce)
+#                 self.core.connection.sendResult(wu, formattedResult, callback)                        
+                return self.core.connection.sendResult(wu, nonce, timestamp, callback)
+            elif self.core.connection:
+                formattedResult = pack('>68sI4s', wu.data[:68], timestamp,
+                                        wu.data[72:76]) + pack('<I', nonce)
+                d = self.core.connection.sendResult(formattedResult) #This is not in hex?
+                d.addCallback(callback)
+                return True
         else:
             self.core.logger.debug("Result didn't meet full "
                                    "difficulty, not sending")

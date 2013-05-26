@@ -30,6 +30,7 @@ from twisted.internet import reactor, task, defer
 
 from .. import backend
 from ..backend.MMPProtocol import MMPClient
+from ..backend.StratumProtocol import StratumClient
 
 from .WorkQueue import WorkQueue
 from .PhoenixLogger import *
@@ -37,6 +38,9 @@ from .KernelInterface import KernelInterface
 from .PhoenixConfig import PhoenixConfig
 from .PhoenixRPC import PhoenixRPC
 from .PluginInterface import PluginInterface
+
+from urlparse import urlparse
+from ..gui.PhoenixGUILogger import PhoenixGUILogger 
 
 class PhoenixCore(object):
     """The root-level object of a Phoenix mining instance."""
@@ -47,7 +51,7 @@ class PhoenixCore(object):
 
     def __init__(self, cfgFilename='phoenix.cfg'):
         self.kernelTypes = {}
-        self.connection = None
+        self.connection = None #Is a ClientBase
         self.connectionURL = None
         self.connected = False
         self.connectionType = 'none'
@@ -59,7 +63,8 @@ class PhoenixCore(object):
             self.basedir = os.path.dirname(sys.executable)
 
         self.config = PhoenixConfig(cfgFilename)
-        self.logger = PhoenixLogger(self)
+        gui = self.config.get('general', 'gui', bool, False)
+        self.logger = PhoenixGUILogger(self) if gui else PhoenixLogger(self) 
         self.queue = WorkQueue(self)
         self.rpc = PhoenixRPC(self)
 
@@ -137,7 +142,7 @@ class PhoenixCore(object):
                 self.plugins[name] = plugin.PhoenixPlugin(self.pluginIntf)
         except (ImportError, AttributeError):
             if not silent:
-                self.logger.log('Failed to load plugin "%s"' % name)
+                self.logger.log('Failed to load plugin "%s" %s' % (name, plugindir))
 
     def discoverPlugins(self):
         plugindir = os.path.join(self.basedir, 'plugins')
@@ -267,19 +272,22 @@ class PhoenixCore(object):
             self.connection = None
             self.onDisconnect() # Make sure the disconnect log goes through...
 
-        self.connectionURL = url
-
-        if self.failbackLoop:
+        if self.failbackLoop and not self.failbackLoop.running:
             self.failbackLoop.stop()
             self.failbackLoop = None
 
         if not url:
             return
+        
+        self.connectionURL = url
 
-        self.connection = backend.openURL(url, self)
+        self.connection = backend.openURL(url, self) #Opens a new connection (i.e. creates a new client)
 
         if isinstance(self.connection, MMPClient):
             self.connectionType = 'mmp'
+        elif isinstance(self.connection, StratumClient):
+            self.connectionType = 'stratum'
+#             self.queue.queuesize = 20 #custom queue size for stratum, is okay because of clear_jobs notification
         else:
             self.connectionType = 'rpc'
         self.logger.refreshStatus()
@@ -442,19 +450,24 @@ class PhoenixCore(object):
             index = -1
         nextIndex = (index+1)%len(backups)
         nextBackend = backups[nextIndex]
-        if nextBackend == self.connectionURL:
+        #Important! Stratum doesn't have a retry rate polling thingy
+        if nextBackend == self.connectionURL and not isinstance(self.connection, StratumClient):
             self.logger.log("Couldn't connect to server, retrying...")
         else:
-            self.logger.log("Couldn't connect to server, switching backend...")
+            wait = self.config.get('general', 'retry_rate', int, 1)
+            self.logger.log("Couldn't connect to server, switching backend in %ds..." % wait)
+            time.sleep(wait)
             self.switchURL(nextBackend)
             if nextIndex != 0:
-                assert not self.failbackLoop
+                #assert not self.failbackLoop
                 failbackInterval = self.config.get('general', 'failback',
                                                    int, 600)
-                if failbackInterval:
+                if failbackInterval and not self.failbackLoop:
                     self.failbackLoop = task.LoopingCall(self.attemptFailback)
                     self.failbackLoop.start(failbackInterval)
-
+    
+    def onSwitchserver(self, url):
+        self.switchURL(url)
     def onConnect(self):
         if not self.connected:
             self.logger.dispatch(ConnectionLog(True, self.connectionURL))
@@ -470,8 +483,11 @@ class PhoenixCore(object):
     def onMsg(self, msg):
         self.logger.log('MSG: ' + str(msg))
     def onWork(self, work):
-        self.logger.debug('Server gave new work; passing to WorkQueue')
+        self.logger.debug('We have new work; passing to WorkQueue')
         self.queue.storeWork(work)
+    def onWorkclear(self):
+        self.logger.debug('Server asked to clear work queue')
+        self.queue.workClear()
     def onLongpoll(self, lp):
         self.connectionType = 'rpclp' if lp else 'rpc'
         self.logger.refreshStatus()

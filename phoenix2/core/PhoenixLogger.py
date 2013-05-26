@@ -113,10 +113,12 @@ class BlockChangeLog(PhoenixLog):
 class ResultLog(PhoenixLog):
     TYPE = 'result'
 
-    def __init__(self, kernelif, hash, accepted):
+    def __init__(self, kernelif, hash, accepted, error_code=None, error_msg=None):
         self._setup(kernelif)
         self.hash = hash
         self.accepted = accepted
+        self.error_code = error_code
+        self.error_msg = error_msg
 
     def getMsg(self, verbose):
         status = ('ACCEPTED' if self.accepted else 'REJECTED')
@@ -140,9 +142,9 @@ class ConnectionLog(PhoenixLog):
 
     def getMsg(self, verbose):
         if self.connected:
-            return 'Connected to server'
+            return 'Connected to server {}'.format(self.url)
         else:
-            return 'Disconnected from server'
+            return 'Disconnected from server {}'.format(self.url)
 
     def getDetails(self): return {'connected': self.connected, 'url': self.url}
 
@@ -183,7 +185,7 @@ class ConsoleOutput(object):
         update = '\r'
         update += status
         update += ' ' * (len(self._status) - len(status))
-        update += '\b' * (len(self._status) - len(status))
+        update += '\b' * (len(self._status) - len(status)) #backspace \b
         sys.stderr.write(update)
         self._status = status
 
@@ -263,7 +265,7 @@ class PhoenixLogger(object):
                 self.rejected += 1
             self.refreshStatus()
         elif isinstance(log, RateUpdateLog):
-            self.rateText = self.formatNumber(log.rate) + 'hash/s'
+            self.rateText = self.formatNumber(log.rate) + 'H/s'
             self.refreshStatus()
 
     def refreshStatus(self):
@@ -282,13 +284,18 @@ class PhoenixLogger(object):
 
         if self.core.connected:
             connectionType = {'mmp': 'MMP', 'rpc': 'RPC',
-                              'rpclp': 'RPC (+LP)'
+                              'rpclp': 'RPC(+LP)', 'stratum': 'Stratum'
                              }.get(self.core.connectionType, 'OTHER')
         else:
             connectionType = 'DISCONNECTED'
-        self.console.status('[%s] [%s Accepted] [%s Rejected] [%s]' %
+        
+        if self.core.connection:
+            hostname = self.core.connection.url.hostname
+        else:
+            hostname = ''
+        self.console.status('[%s] [%s A] [%s R] [%s] [%s]' %
                             (self.rateText, self.accepted,
-                             self.rejected, connectionType))
+                             self.rejected, connectionType, hostname)) #the url is already parsed!
 
     @classmethod
     def formatNumber(cls, n):

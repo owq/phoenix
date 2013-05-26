@@ -158,6 +158,8 @@ class RPCPoller(HTTPBase):
                     (headers, result) = x
                 except TypeError:
                     return
+                if self.root.checkStratum(headers):
+                    return
                 self.root.handleWork(result, headers)
                 self.root.handleHeaders(headers)
             finally:
@@ -187,7 +189,7 @@ class RPCPoller(HTTPBase):
 
         (headers, data) = response
         result = self.parse(data)
-        defer.returnValue((headers, result))
+        defer.returnValue((headers, result)) #here, callback is called with these results
 
     @classmethod
     def parse(cls, data):
@@ -304,6 +306,7 @@ class RPCClient(ClientBase):
         self.submitold = False
         self.block = None
         self.setupMaxtime()
+        self.autoStratum = self.handler.config.get('general', 'auto_stratum', bool, True)
 
     def connect(self):
         """Begin communicating with the server..."""
@@ -391,7 +394,25 @@ class RPCClient(ClientBase):
         except (KeyError, ValueError):
             askrate = defaults.get(variable, 10)
         self.poller.setInterval(askrate)
+    
+    #TODO VERIFY THIS WORKS!
+    def checkStratum(self, headers):
+        """Check if there is a Stratum server"""
+        if not self.autoStratum:
+            return False
+        #Disconnect, then switchURL to Stratum on core
+        stratum = headers.get('x-stratum')
+        if stratum is not None:
+            parse = urlparse.urlparse(stratum)
+            hostname = self.url.hostname if not parse.hostname else parse.hostname
+            port = 3333 if not parse.port else parse.port
+            url = "stratum://%s:%s@%s:%d" % (self.url.username, self.url.password, hostname, port)
+            self.runCallback('debug', "Switching to Stratum: %s" % url)
+            self.runCallback('switchserver', url)
+            return True
+        return False
 
+    # called from getwork response directly: self.root.handleWork(result, headers)
     def handleWork(self, work, headers, pushed=False):
         if work is None:
             return;
