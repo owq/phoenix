@@ -59,7 +59,7 @@ class GUI(object):
         
     def add_to_console(self, text):
         buffer = self.consoleView.get_buffer()
-        buffer.insert_at_cursor(text)
+        buffer.insert(buffer.get_end_iter(), text)
         
     def replace_status(self, text):
         statusbar = self.mainStatusbar
