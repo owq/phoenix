@@ -134,6 +134,15 @@ class StratumClient(ClientBase):
             self.stop()
         except Exception:
             self.stop()
+            
+    def add_servers(self, hosts):
+        """Add server to backup. TODO: This is not very well-implemented, but will do for now"""
+        backups = self.config.get('general', 'backups', str, '')
+        for host in hosts:
+            url = "stratum://%s:%s@%s:%s" % (self.url.username, self.url.password, host['host'], host['port'])
+            self.runCallback('debug', "Adding %s to backup list" % (url))
+            backups += " " + url
+        self.config.set('general', 'backups', backups)
                           
     def handle_message(self, message):
         #TODO CONSUME IF DISCONNECT
@@ -199,10 +208,10 @@ class StratumClient(ClientBase):
                     self.runCallback('switchserver', url)
                 Timer(timeout, reconnect).start()
 
-            #client.add_peers TODO deal with this later (damn troublesome)
+            #client.add_peers (quick hack; to be improved)
             elif message['method'] == 'client.add_peers':
                 hosts = [{'host': host[0], 'port': host[1]} for host in message['params'][0]]
-                #self.switch.add_servers(hosts)
+                self.add_servers(hosts)
 
         #responses to server API requests
         elif 'result' in message:
