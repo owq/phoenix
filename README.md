@@ -4,6 +4,7 @@ phoenix bitcoin miner with added Stratum support and simple GUI
 Base: Phoenix Bitcoin Miner 2.0
 
 Additions:
+
 1. Stratum protocol support (use stratum:// instead of http://) (not full support but the main stuff implemented)
 2. Simple GUI with minimize to tray
 3. New options in example.cfg
