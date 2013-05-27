@@ -32,6 +32,7 @@ import asynchat
 import asyncore
 import socket
 import traceback
+from twisted.internet import reactor
 
 class Job(object):
     def __init__(self):
@@ -393,7 +394,8 @@ class StratumClient(ClientBase):
                     return
                     
             self.runCallback('debug', "Refreshing job %s; extranonce2: %X" % (self.current_job.job_id, self.current_job.extranonce2))        
-            self.handleWork(self.stratum_to_getwork(self.current_job))
+            #VERIFY that recursion is fixed here
+            reactor.callLater(0, self.handleWork, self.stratum_to_getwork(self.current_job))
 
     def sendResult(self, wu, nonce, timestamp, callback):
         """Send share to server. Adapted from poclbm"""
