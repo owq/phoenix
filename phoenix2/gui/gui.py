@@ -25,9 +25,10 @@ class GUI(object):
         menu.popup(None, None, None, button, time, self.statusicon)
         
     def window_state_event(self, widget, event):
-        if event.new_window_state & gtk.gdk.WINDOW_STATE_ICONIFIED:
-            self.win.hide()
-            return True #go on...
+        if event.changed_mask & gtk.gdk.WINDOW_STATE_ICONIFIED:
+            if event.new_window_state & gtk.gdk.WINDOW_STATE_ICONIFIED:
+                self.win.hide()
+        return True
         
     def delete_event(self, window, event):
         #don't delete; hide instead
@@ -42,10 +43,10 @@ class GUI(object):
         else:
             self.win.show_all()
             self.win.present()
-            
+    
     def scroll_to_bot(self, *widgets):
         for widget in widgets:
-            adj = widget.get_vadjustment()
+            adj = widget.parent.get_vadjustment()
             adj.set_value( adj.upper - adj.page_size )
         
     def treeview_auto_scroll(self, widget, event, data=None):
@@ -136,7 +137,7 @@ class GUI(object):
         self.statusicon.connect("activate", self.status_clicked)
         self.win.connect("delete-event", self.exit)
         self.win.connect("window-state-event", self.window_state_event)
-        self.win.connect_after("map-event", self.map_event) #woah. map event is the one that works! not show event
+        self.win.connect_after("map-event", self.map_event)
         self.statusicon.set_tooltip("Phoenix Miner") #TODO non-hardcode
 
 class GUIThread(threading.Thread):

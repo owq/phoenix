@@ -117,7 +117,18 @@ class StratumClient(ClientBase):
     def send_message(self, message):
         data = dumps(message) + '\n'
         try:
-            self.socket_handler.push(data)
+            #self.socket_handler.push(data)
+            #there is some bug with asyncore's send mechanism http://bugs.python.org/issue17925
+            #so we send data 'manually'
+            #note that this is not thread safe
+            #Need to test this.
+            with self.send_lock:
+                if not self.handler:
+                    return False
+                while data:
+                    sent = self.handler.send(data)
+                    data = data[sent:]
+                return True
 
         except AttributeError:
             self.stop()
@@ -159,8 +170,7 @@ class StratumClient(ClientBase):
 
             #mining.get_version
             if message['method'] == 'mining.get_version':
-                with self.send_lock:
-                    self.send_message({"error": None, "id": message['id'], "result": self.user_agent})
+                self.send_message({"error": None, "id": message['id'], "result": self.user_agent})
 
             #mining.set_difficulty
             #VERIFY REFRESH TARGETS/clear work queue on FIRST difficulty change???
