@@ -376,6 +376,18 @@ class StratumClient(ClientBase):
             self.version = '%s/%s' % (shortname, version)
         else:
             self.version = shortname
+            
+    def switchCurrentJob(self):
+        """Delete current job and get a new one. """
+        if self.current_job.job_id in self.jobs:
+            del self.jobs[self.current_job.job_id]
+            if len(self.jobs) > 0:
+                for id, job in self.jobs:
+                    self.current_job = job
+                    break
+            else:
+                self.current_job = None
+                return
 
     def requestWork(self):
         """Application needs work right now. Refresh job, also checking if job extranonce2 is max."""
@@ -384,13 +396,8 @@ class StratumClient(ClientBase):
             if self.current_job.extranonce2 >= self.extranonce2_max:
                 #Expire job and get new one
                 self.runCallback('debug', "Job %s reached extranonce2 limit at %X, removing..." % (self.current_job.job_id, self.current_job.extranonce2))    
-                del self.jobs[self.current_job.job_id]
-                if len(self.jobs) > 0:
-                    for id, job in self.jobs:
-                        self.current_job = job
-                        break
-                else:
-                    self.current_job = None
+                self.switchCurrentJob()
+                if not self.current_job:
                     return
                     
             self.runCallback('debug', "Refreshing job %s; extranonce2: %X" % (self.current_job.job_id, self.current_job.extranonce2))        

@@ -120,8 +120,12 @@ class WorkQueue(object):
             self.logger.debug('Server gave work from the previous '
                               'block, ignoring.')
             #if the queue is too short request more work
+            #note that if this is stratum... the same job will be refreshed.
             if self.checkQueue():
                 if self.core.connection:
+                    if isinstance(self.core.connection, StratumClient):
+                        #need to switch else requestWork will just refresh the same job
+                        self.core.connection.switchCurrentJob()
                     self.core.connection.requestWork()
             return
 
