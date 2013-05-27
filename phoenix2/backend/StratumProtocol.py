@@ -123,10 +123,10 @@ class StratumClient(ClientBase):
             #note that this is not thread safe
             #Need to test this.
             with self.send_lock:
-                if not self.handler:
+                if not self.socket_handler:
                     return False
                 while data:
-                    sent = self.handler.send(data)
+                    sent = self.socket_handler.send(data)
                     data = data[sent:]
                 return True
 
