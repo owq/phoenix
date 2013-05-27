@@ -24,11 +24,10 @@ class GUI(object):
 
         menu.popup(None, None, None, button, time, self.statusicon)
         
-    def minimize_event(self, widget, event):
-        if event.changed_mask & gtk.gdk.WINDOW_STATE_ICONIFIED:
-            if event.new_window_state & gtk.gdk.WINDOW_STATE_ICONIFIED:
-                self.win.hide()
-                return True #go on...
+    def window_state_event(self, widget, event):
+        if event.new_window_state & gtk.gdk.WINDOW_STATE_ICONIFIED:
+            self.win.hide()
+            return True #go on...
         
     def delete_event(self, window, event):
         #don't delete; hide instead
@@ -43,6 +42,11 @@ class GUI(object):
         else:
             self.win.show_all()
             self.win.present()
+            
+    def scroll_to_bot(self, *widgets):
+        for widget in widgets:
+            adj = widget.get_vadjustment()
+            adj.set_value( adj.upper - adj.page_size )
         
     def treeview_auto_scroll(self, widget, event, data=None):
         """Autoscroll ONLY IF at (one-fifth? of) last page"""
@@ -52,6 +56,9 @@ class GUI(object):
         max = adj.upper - adj.page_size
         if max - adj.value <= adj.page_size/5:
             adj.set_value( max )
+            
+    def map_event(self, widget, event):
+        self.scroll_to_bot(self.shareView, self.consoleView)
             
     def add_auto_scroll(self, *widgets):
         for widget in widgets:
@@ -128,7 +135,8 @@ class GUI(object):
         self.statusicon.connect("popup-menu", self.statusicon_menu)
         self.statusicon.connect("activate", self.status_clicked)
         self.win.connect("delete-event", self.exit)
-        self.win.connect("window-state-event", self.minimize_event)
+        self.win.connect("window-state-event", self.window_state_event)
+        self.win.connect_after("map-event", self.map_event) #woah. map event is the one that works! not show event
         self.statusicon.set_tooltip("Phoenix Miner") #TODO non-hardcode
 
 class GUIThread(threading.Thread):
