@@ -110,7 +110,7 @@ class StratumClient(ClientBase):
         self.send_lock = Lock()
         self.send_callback = None
         self.message_timeout = 15
-        self.maxtime = self.handler.config.get('general', 'maxtime', int, 88) if self.handler.config else 88
+        self.maxtime = 60
         self.firstDifficultySet = True
         
     ## From poclbm StratumSource ##
