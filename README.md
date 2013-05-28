@@ -22,3 +22,7 @@ py2exe
 1. python setup-py2exe.py py2exe
 2. copy phoenix2\plugins to dist\plugins
 3. copy phoenix2\gui to dist\phoenix2\gui
+
+donate
+=======
+1PqnE5oGKjn38tWWFDWRbwWbDsr2rbpc8V

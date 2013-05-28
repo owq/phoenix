@@ -85,15 +85,11 @@ class StratumClient(ClientBase):
             s = param.split('=',1)
             if len(s) == 2:
                 self.params[s[0]] = s[1]
-        #self.auth = 'Basic ' + ('%s:%s' % (
-        #    url.username, url.password)).encode('base64').strip()
-        #Stratum doesn't need Auth header.
         self.version = 'RPCClient/2.0'
 
         self.saidConnected = False
         
         #stratum source
-        #TODO can remove some variables... not used here
         self.BASE_DIFFICULTY = 0x00000000FFFF0000000000000000000000000000000000000000000000000000
         self.socket_handler = None
         self.socket = None
@@ -145,8 +141,6 @@ class StratumClient(ClientBase):
         self.config.set('general', 'backups', backups)
                           
     def handle_message(self, message):
-        #TODO CONSUME IF DISCONNECT
-        
         #Miner API
         if 'method' in message:
 
