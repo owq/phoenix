@@ -453,9 +453,9 @@ class PhoenixCore(object):
         if nextBackend == self.connectionURL and not isinstance(self.connection, StratumClient):
             self.logger.log("Couldn't connect to server, retrying...")
         else:
-            wait = self.config.get('general', 'retry_rate', int, 1)
+            wait = self.config.get('general', 'retry_rate', int, 5)
             self.logger.log("Couldn't connect to server, switching backend in %ds..." % wait)
-            time.sleep(wait)
+            time.sleep(wait) #okay to block since program probably can't do anything else
             self.switchURL(nextBackend)
             if nextIndex != 0:
                 #assert not self.failbackLoop
