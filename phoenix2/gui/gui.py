@@ -48,6 +48,31 @@ class GUI(object):
         for widget in widgets:
             adj = widget.parent.get_vadjustment()
             adj.set_value( adj.upper - adj.page_size )
+            
+    def copy_share_row(self, widget, (model, path)):
+        tree_iter = model.get_iter(path)
+        text = model.get_value(tree_iter, 2)
+        clipboard = gtk.Clipboard(gtk.gdk.display_manager_get().get_default_display(), "CLIPBOARD")
+        clipboard.set_text(text)
+        
+    def share_button_press_event(self, treeview, event):
+        if event.button == 3: # right click
+            result = treeview.get_path_at_pos(int(event.x), int(event.y))
+            if result == None: return
+            
+            path, col, x, y = result
+            model = treeview.get_model()
+            
+            # do something with the selected path
+            menu = gtk.Menu()
+
+            copy = gtk.MenuItem("Copy hash")
+            copy.connect("activate", self.copy_share_row, (model, path))
+    
+            menu.append(copy)
+            menu.show_all()
+    
+            menu.popup(None, None, None, event.button, event.time, None)
         
     def treeview_auto_scroll(self, widget, event, data=None):
         """Autoscroll ONLY IF at (one-fifth? of) last page"""
@@ -114,6 +139,7 @@ class GUI(object):
             cell = gtk.CellRendererText()
             col.pack_start(cell, False)
             col.add_attribute(cell, "text", pos)
+            return cell, col
             
         def addStockColumn(title, pos):
             col = gtk.TreeViewColumn(title + " ")
@@ -124,7 +150,8 @@ class GUI(object):
         
         addTextColumn("Time", 0)
         addTextColumn("Device", 1)
-        addTextColumn("Hash", 2)
+        hashCell, col = addTextColumn("Hash", 2)
+        hashCell.set_property("font", "monospace")
         addStockColumn("Status", 3)
         addTextColumn("Error", 4)
         
@@ -139,6 +166,8 @@ class GUI(object):
         self.win.connect("window-state-event", self.window_state_event)
         self.win.connect_after("map-event", self.map_event)
         self.statusicon.set_tooltip("Phoenix Miner") #TODO non-hardcode
+        
+        self.shareView.connect('button-press-event' , self.share_button_press_event)
 
 class GUIThread(threading.Thread):
     def __init__(self, parent):
