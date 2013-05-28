@@ -106,8 +106,9 @@ class StratumClient(ClientBase):
         self.send_lock = Lock()
         self.send_callback = None
         self.message_timeout = 15
-        self.maxtime = 60
         self.firstDifficultySet = True
+        
+        self.setupMaxtime()
         
     ## From poclbm StratumSource ##
     def send_message(self, message):
@@ -381,6 +382,16 @@ class StratumClient(ClientBase):
         if self.socket_handler:
             self.socket_handler.close() #thread should stop when done?
 
+    def setupMaxtime(self):
+        try:
+            self.maxtime = int(self.params['maxtime'])
+            if self.maxtime < 0:
+                self.maxtime = 0
+            elif self.maxtime > 3600:
+                self.maxtime = 3600
+        except (KeyError, ValueError):
+            self.maxtime = 60
+            
     def setMeta(self, var, value):
         """RPC clients do not support meta. Ignore."""
 
