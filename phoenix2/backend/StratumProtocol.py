@@ -32,6 +32,7 @@ import asynchat
 import asyncore
 import socket
 import traceback
+import pprint
 from twisted.internet import reactor
 
 class Job(object):
@@ -177,7 +178,7 @@ class StratumClient(ClientBase):
                 self.send_message({"error": None, "id": message['id'], "result": self.user_agent})
 
             #mining.set_difficulty
-            #VERIFY REFRESH TARGETS/clear work queue on FIRST difficulty change???
+            #TODO: VERIFY REFRESH TARGETS/clear work queue on FIRST difficulty change???
             elif message['method'] == 'mining.set_difficulty':
                 self.runCallback('debug', "Setting new difficulty: %s" % message['params'][0])
                 self.server_difficulty = self.BASE_DIFFICULTY / message['params'][0]
@@ -186,11 +187,8 @@ class StratumClient(ClientBase):
                         self.runCallback('workclear')
                         self.requestWork()
                     self.firstDifficultySet = False
-                
-            # i guess we leave the next 2 for later... not that easy to implement
-            # need to "switchURL"
 
-            #TODO verify this works
+            #TODO: VERIFY
             elif message['method'] == 'client.reconnect':
                 address, port = self.url.hostname, self.url.port
                 (new_address, new_port, timeout) = message['params'][:3]
@@ -257,7 +255,9 @@ class StratumClient(ClientBase):
                         self.runCallback('connect')
                     
             else:
-                pass #TODO handle unknown cases?
+                #unknown cases TODO: verify
+                self.runCallback('debug', 'Unknown message received:')
+                self.runCallback('debug', pprint.pformat(message))
                 
     def extranonce2_padding(self, extranonce2):
         '''Return extranonce2 with padding bytes'''
