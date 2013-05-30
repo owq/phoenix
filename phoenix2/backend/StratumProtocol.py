@@ -210,10 +210,8 @@ class StratumClient(ClientBase):
 
         #responses to server API requests
         elif 'result' in message:
-
             #check if this is submit confirmation (message id should be in submits dictionary)
-            #cleanup if necessary
-            #TODO this part
+            #cleanup if submits are too old
             if message['id'] in self.submits:
                 accepted = message['result'] #this is the response BODY
                 
