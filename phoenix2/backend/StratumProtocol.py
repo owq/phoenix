@@ -215,7 +215,6 @@ class StratumClient(ClientBase):
             #cleanup if necessary
             #TODO this part
             if message['id'] in self.submits:
-                nonce = self.submits[message['id']][:1]
                 accepted = message['result'] #this is the response BODY
                 
                 if 'error' in message and message['error']:
@@ -226,8 +225,8 @@ class StratumClient(ClientBase):
                 del self.submits[message['id']]
                 if time() - self.last_submits_cleanup > 3600:
                     now = time()
-                    for key, value in self.submits.items():
-                        if now - value[2] > 3600:
+                    for key in list(self.submits): #needed for Py3 compatibility
+                        if now - self.submits[key] > 3600:
                             del self.submits[key]
                     self.last_submits_cleanup = now
                     
@@ -437,7 +436,7 @@ class StratumClient(ClientBase):
         ntime = pack('>I', timestamp).encode('hex') #NOTE: must be big endian!
         hex_nonce = pack('<I', nonce).encode('hex')
         id_ = job_id + hex_nonce
-        self.submits[id_] = (nonce, time()) #'id': id_,
+        self.submits[id_] = time() #'id': id_,
         return self.send_message({'params': [self.url.username, job_id, extranonce2, ntime, hex_nonce], 'id': id_, 'method': u'mining.submit'})
 
     def handleWork(self, (work, extranonce2, job_id), pushed=False):
